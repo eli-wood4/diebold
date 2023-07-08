@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Map</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      height: 95%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <input type="text" id="activityNumberInput" placeholder="Enter activity number">
+  <button onclick="changeMarkerColor()">Change Marker Color</button>
+  <div id="timestamp">Last Updated: <span id="timestampValue"></span></div>
+  <script src="activities.js"></script> <!-- Include the activities.js file here -->
+  <script>
+    var markers = []; // Array to store markers
+
+    function initMap() {
+      var charlotte = { lat: 35.2271, lng: -80.8431 }; // Coordinates for Charlotte, NC
+      var mapOptions = {
+        zoom: 10,
+        center: charlotte,
+        disableDefaultUI: true, // Disable default map controls
+        styles: [
+          {
+            featureType: 'poi',
+            stylers: [{ visibility: 'off' }] // Hide points of interest
+          }
+        ]
+      };
+
+      var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+      // Get the user's position and display it on the map
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var userLatLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+
+          var userMarker = new google.maps.Marker({
+            map: map,
+            position: userLatLng,
+            title: 'Your Location',
+            icon: {
+              url: 'https://img.icons8.com/?size=512&id=5GuCdiMgRwxm&format=png',
+              scaledSize: new google.maps.Size(40, 40) // Adjust the size of the marker icon as needed
+            }
+          });
+
+          map.setCenter(userLatLng);
+        }, function(error) {
+          console.log('Error getting user position:', error);
+        });
+      }
+
+      // Loop through each activity and create a marker on the map
+      for (var i = 0; i < activities.length; i++) {
+        var activity = activities[i];
+        var address = activity.address;
+
+        // Delay before geocoding to avoid OVER_QUERY_LIMIT error
+        setTimeout(geocodeAddress.bind(null, map, activity, address), i * 50);
+      }
+    }
+
+    function displayTimestamp(timestamp) {
+      var timestampElement = document.getElementById('timestamp');
+      timestampElement.textContent = 'Last Updated: ' + timestamp;
+    }
+
+    if (typeof activitiesTimestamp !== 'undefined') {
+      displayTimestamp(activitiesTimestamp);
+    }
+
+    function geocodeAddress(map, activity, address) {
+      var geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: address }, function(results, status) {
+        if (status === 'OK') {
+          var marker = new google.maps.Marker({
+            map: map,
+            position: results[0].geometry.location,
+            title: activity.activity_number
+          });
+
+          // Add the marker to the markers array
+          markers.push(marker);
+
+          // Check the activity status and change the marker color accordingly
+          if (activity.status === 'Enroute') {
+            marker.setIcon({
+              url: 'https://img.icons8.com/?size=512&id=gl9WwT7encR3&format=png',
+              scaledSize: new google.maps.Size(40, 40) // Adjust the size of the marker icon as needed
+            });
+          } else if (activity.status === 'Arrived') {
+            marker.setIcon({
+              url: 'https://img.icons8.com/?size=512&id=mX2OYEkIVZBh&format=png',
+              scaledSize: new google.maps.Size(40, 40) // Adjust the size of the marker icon as needed
+            });
+          } else if (activity.status === 'Closed') {
+            marker.setIcon({
+              url: 'https://img.icons8.com/?size=512&id=KTb8R6rG4Etm&format=png',
+              scaledSize: new google.maps.Size(20, 20) // Adjust the size of the marker icon as needed
+            });
+          }
+
+          // Check the activity SR Type and change the marker color accordingly
+          if (activity['SR Type'] === 'TR') {
+            marker.setIcon({
+              url: 'https://img.icons8.com/?size=512&id=wcf04NuKaAWP&format=png',
+              scaledSize: new google.maps.Size(40, 40) // Adjust the size of the marker icon as needed
+            });
+          }
+
+          // Add a click event listener to the marker to display activity information
+          marker.addListener('click', function() {
+            var content =
+              '<h3>Activity Number: ' +
+              activity.activity_number +
+              '</h3>' +
+              '<p>Status: ' +
+              activity.status +
+              '</p>' +
+              '<p>Site Number: ' +
+              activity.site_number +
+              '</p>' +
+              '<p>Name: ' +
+              activity.name +
+              '</p>' +
+              '<p>Address: ' +
+              address +
+              '</p>' +
+              '<p>SR Type: ' +
+              activity['SR Type'] +
+              '</p>' +
+              '<p>ATM ID: ' +
+              activity['ATM ID'] +
+              '</p>' +
+              '<p>Fault: ' +
+              activity.Fault +
+              '</p>'; // Add the information
+
+            var infoWindow = new google.maps.InfoWindow({ content: content });
+            infoWindow.open(map, marker);
+          });
+        } else {
+          console.log('Geocode was not successful for the following reason: ' + status);
+        }
+      });
+    }
+
+    function changeMarkerColor() {
+      var activityNumber = document.getElementById('activityNumberInput').value;
+
+      // Iterate through the markers and change the color of the marker with the matching activity number
+      for (var i = 0; i < markers.length; i++) {
+        if (markers[i].title === activityNumber) {
+          markers[i].setIcon({
+            url: 'https://img.icons8.com/?size=70&id=7880&format=png',
+            scaledSize: new google.maps.Size(40, 40) // Adjust the size of the marker icon as needed
+          });
+        }
+      }
+    }
+
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2kk_fmvQLRuDndyLGryZNx9aJQL6lVrA&callback=initMap"async defer></script>
+</body>
+</html>
